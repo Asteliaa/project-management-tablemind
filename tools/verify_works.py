@@ -174,6 +174,23 @@ elif work == 'cross':
     names1 = {r.cells[0].text: r.cells[1].text for r in tw1.rows[1:]}
     check('Таблица 4.2 ПЗ1 совпадает с WBS ПЗ4 (коды и названия работ)', names1 == names4, f'{len(names1)} работ')
     check('Should-функции (ghost-подсказки, Cmd-K) не запланированы ни в одной работе', not re.search(r'ghost|Cmd-K', t4 + rtxt) and 'ghost' not in ' '.join(names1.values()))
+    beta1 = set(re.findall(r'открыт[^.;]{0,60}?бет[^.;]{0,40}?(\d\d\.\d\d\.\d{4})|(\d\d\.\d\d\.\d{4})[^.;]{0,15}веб-аудит открыт', t1))
+    d1 = {x for pair in beta1 for x in pair if x}
+    d4 = set(re.findall(r'открытая бета веб-аудита с оплатой[^—]*— (\d\d\.\d\d\.\d{4})', t4))
+    check('Дата открытой беты с оплатой одинакова в ПЗ1 и ПЗ4', d1 == d4 and len(d4) == 1, ', '.join(sorted(d1 | d4)))
+    import hashlib
+    md5 = lambda b: hashlib.md5(b).hexdigest()
+    pngs = {md5(open(f'{R}/appendix/{n}.png', 'rb').read()) for n in ('wbs_tree', 'network_pdm', 'gantt')}
+    emb4 = {md5(zipfile.ZipFile(glob.glob(f'{R}/pz4/*.docx')[0]).read(n)) for n in zipfile.ZipFile(glob.glob(f'{R}/pz4/*.docx')[0]).namelist() if n.startswith('word/media/')}
+    za = zipfile.ZipFile(f'{R}/appendix/ПЗ4_Приложение_расчёты_WBS_PERT_CPM_TableMind.xlsx')
+    emba = {md5(za.read(n)) for n in za.namelist() if n.startswith('xl/media/')}
+    check('Рисунки в отчёте ПЗ4 и в приложении — актуальные (совпадают с appendix/*.png)', emb4 == pngs and emba == pngs)
+    ra = ' '.join(str(wa.cell(r, 12).value) for r in range(5, 24))
+    check('Меры по рискам не опираются на Should, которые уже исключены из плана', not re.search(r'перенос Should', rtxt + ra))
+    tasks = ' '.join(p for p in ps if re.match(r'^\d\.\d\. ', p))
+    must_kw = {'импорт/загрузка': 'загрузк', 'аудит правилами': 'правил', 'объяснения': 'объяснени', 'исправления': 'DSL', 'сверка текста': 'сверк', 'экспорт': 'экспорт', 'оплата': 'Stripe', 'надстройка': 'при правке'}
+    miss = [k for k, v in must_kw.items() if v not in tasks]
+    check('Каждое Must-требование ПЗ1 покрыто задачей декомпозиции', not miss, ', '.join(miss) or '8 из 8')
     ass = [c.text for r in p1.tables[3].rows[1:] for c in [r.cells[1]]]
     keys = ['пилотных', 'LLM', 'AppSource', 'лицензи', 'участники']
     check('Каждое допущение ПЗ1 отражено риском в реестре', all(any(k.lower() in str(wr.cell(r, 3).value).lower() or (k == 'участники' and 'разработчика' in str(wr.cell(r, 3).value)) or (k == 'пилотных' and 'пилотных' in str(wr.cell(r, 3).value)) for r in range(4, 24)) for k in keys))
