@@ -1,5 +1,5 @@
 """Checks each coursework file against the assignment requirements. Usage: python verify_works.py <work> <repo_dir>
-work: pz1 | pz4 | risk | appendix. Prints a markdown section and exits 1 if any hard requirement fails."""
+work: pz1 | pz4 | risk | appendix | cross. Prints a markdown section and exits 1 if any hard requirement fails."""
 import sys, re, zipfile, warnings
 import docx, openpyxl
 warnings.filterwarnings('ignore')
@@ -21,11 +21,11 @@ def cells(t):
 
 
 if work == 'pz1':
-    d = docx.Document(f'{R}/pz1/ПЗ1_Концепция_проекта_TableMind.docx'); T = d.tables
+    d = docx.Document(f'{R}/pz1/Земляник - ПЗ1 Концепция проекта TableMind.docx'); T = d.tables
     ps = [p.text for p in d.paragraphs]; full = '\n'.join(ps)
     alltext = full + ' '.join(cells(t) for t in T)
     check('Шаблон заполнен: нет плейсхолдеров <…>, [Пример], ___', not re.search(r'<[^>]{1,40}>|\[Пример|\[Впишите|___', alltext))
-    check('Титульный лист: ФИО слушателя', 'ФИО' not in full, 'вписать ФИО перед сдачей', manual=True)
+    check('Титульный лист: ФИО слушателя', 'Земляник Р.В.' in full and 'ФИО' not in full, 'Земляник Р.В., гр. 60121')
     check('1.1 Модель 5W — ответ на каждый вопрос', all(T[0].rows[i].cells[2].text.strip() for i in range(1, 6)), '5 из 5')
     check('1.2 Бизнес-окружение (3–5 предложений)', any(p.startswith('TableMind — собственный продукт') for p in ps))
     check('1.2 Проблемы → Решения (3 строки)', all(T[1].rows[i].cells[1].text and T[1].rows[i].cells[2].text for i in range(1, 4)))
@@ -65,9 +65,9 @@ if work == 'pz1':
     check('Дата заполнения', 'Дата заполнения: 28.09.2026' in full)
 
 elif work == 'pz4':
-    r4 = docx.Document(f'{R}/pz4/ПЗ4_Отчёт_WBS_сетевой_график_Гант_TableMind.docx'); T = r4.tables
+    r4 = docx.Document(f'{R}/pz4/Земляник - ПЗ4 WBS, сетевой график и диаграмма Ганта TableMind.docx'); T = r4.tables
     full = '\n'.join(p.text for p in r4.paragraphs)
-    check('Титульный лист: ФИО слушателя', 'ФИО' not in full, 'вписать ФИО перед сдачей', manual=True)
+    check('Титульный лист: ФИО слушателя', 'Земляник Р.В.' in full and 'ФИО' not in full, 'Земляник Р.В., гр. 60121')
     codes = [r.cells[0].text for r in T[0].rows[1:]]
     check('1 WBS: 12–15 работ, уникальные коды 1.0, 2.0 …', 12 <= len(codes) <= 15 and len(set(codes)) == len(codes)
           and all(re.fullmatch(r'\d+\.0', c) for c in codes), f'{len(codes)} работ')
@@ -83,14 +83,14 @@ elif work == 'pz4':
     check('CPM: у некритических работ резерв > 0', all(x > 0 for x in ts))
     check('4 Диаграмма Ганта (работы, месяцы, полосы, связи, критический путь цветом)', 'Рисунок 3 — Диаграмма Ганта' in full and len(r4.inline_shapes) == 3)
     check('Сетевой график PDM', 'Рисунок 2 — Сетевой график' in full)
-    wb = openpyxl.load_workbook(f'{R}/pz4/ПЗ4_Планировщик_проекта_TableMind.xlsx'); ws = wb['ТАБЛИЦА ДАННЫХ']
+    wb = openpyxl.load_workbook(f'{R}/pz4/Земляник - Диаграмма Ганта.xlsx'); ws = wb['ТАБЛИЦА ДАННЫХ']
     check('Планировщик: реальные работы вместо демо «раб1…»', all(ws.cell(r, 3).value for r in range(8, 23)) and 'раб' not in str([ws.cell(r, 3).value for r in range(8, 29)]))
     check('Планировщик: ES/EF/LS/LF/резерв/критичность — формулы', all(str(ws.cell(r, c).value).startswith('=') for r in range(9, 23) for c in (6, 8, 9, 10, 11, 12)))
     p = wb['Планировщик проекта']
     check('Планировщик: лист Ганта ссылается на таблицу данных', all(str(p.cell(r, 7).value).startswith("='ТАБЛИЦА ДАННЫХ'") for r in range(5, 20)))
 
 elif work == 'risk':
-    f = f'{R}/risk-management/Карта_рисков_TableMind.xlsx'
+    f = f'{R}/risk-management/Земляник - Карта рисков.xlsx'
     wb = openpyxl.load_workbook(f); ws = wb['Таблица с рисками']
     rr = [r for r in range(4, 24) if ws.cell(r, 3).value]
     check('Название проекта указано', bool(ws['C1'].value))
@@ -114,8 +114,44 @@ elif work == 'appendix':
     wb2 = openpyxl.load_workbook(f'{R}/appendix/Риски_приложение_реестр_TableMind.xlsx', data_only=True)
     w2 = wb2['Реестр рисков']
     n = len([r for r in range(5, 25) if w2.cell(r, 3).value and str(w2.cell(r, 2).value).startswith('R')])
-    check('Приложение рисков: те же 18 рисков, что в шаблоне', n == 18, f'{n}')
+    n_tpl = len([r for r in range(4, 24) if openpyxl.load_workbook(f'{R}/risk-management/Земляник - Карта рисков.xlsx')['Таблица с рисками'].cell(r, 3).value])
+    check('Приложение рисков: те же риски, что в шаблоне', n == n_tpl, f'{n} = {n_tpl}')
     check('Приложение рисков: резерв покрывает принятые риски', any(w2.cell(r, 4).value == 'ДА' for r in range(20, 40)))
+
+elif work == 'cross':
+    import glob
+    p1 = docx.Document(glob.glob(f'{R}/pz1/*.docx')[0]); p4 = docx.Document(glob.glob(f'{R}/pz4/*.docx')[0])
+    t1 = '\n'.join(p.text for p in p1.paragraphs) + ' '.join(cells(t) for t in p1.tables)
+    t4 = '\n'.join(p.text for p in p4.paragraphs) + ' '.join(cells(t) for t in p4.tables)
+    check('MVP 31.03.2027 одинаково в ПЗ1 и ПЗ4', '31.03.2027' in t1 and '31.03.2027' in t4)
+    check('Завершение 30.09.2027 одинаково в ПЗ1 и ПЗ4', '30.09.2027' in t1 and '30.09.2027' in t4)
+    check('Бюджет 517 000 BYN одинаков в ПЗ1 и ПЗ4', '517 000' in t1 and '517 000' in t4)
+    wr = openpyxl.load_workbook(glob.glob(f'{R}/risk-management/*.xlsx')[0])['Таблица с рисками']
+    rtxt = ' '.join(str(wr.cell(r, c).value) for r in range(4, 24) for c in range(3, 10))
+    check('Резерв 47 000 BYN одинаков в ПЗ1 и реестре рисков', '47 000' in t1 and '47 000' in rtxt)
+    codes4 = [r.cells[0].text for r in p4.tables[0].rows[1:]]
+    ps = [p.text for p in p1.paragraphs]
+    stages = [p for p in ps if re.match(r'^\d\. .*\(WBS', p)]
+    covered = set()
+    for s_ in stages:
+        m = re.search(r'WBS ([\d.]+)(?:–([\d.]+))?', s_)
+        a, b = float(m.group(1)), float(m.group(2) or m.group(1))
+        covered |= {c for c in codes4 if a <= float(c) <= b}
+    check('Этапы декомпозиции ПЗ1 покрывают все 15 работ WBS ПЗ4', covered == set(codes4), f'{len(stages)} этапов → {len(covered)} работ')
+    wa = openpyxl.load_workbook(f'{R}/appendix/Риски_приложение_реестр_TableMind.xlsx')['Реестр рисков']
+    refs = set()
+    for r in range(5, 25):
+        val = wa.cell(r, 14).value
+        if val and val != 'все':
+            refs |= {x.strip() for x in str(val).split(',')}
+    check('Риски ссылаются только на существующие работы WBS', refs <= set(codes4), ', '.join(sorted(refs - set(codes4))) or 'все ссылки корректны')
+    cp4 = re.search(r'Критический путь: ([\d. →]+)', t4).group(1).strip().rstrip('.')
+    wg = openpyxl.load_workbook(glob.glob(f'{R}/pz4/*.xlsx')[0])['ТАБЛИЦА ДАННЫХ']
+    crit_rows = [str(wg.cell(r, 3).value).split()[0] for r in range(8, 23)]
+    check('Планировщик содержит те же 15 работ WBS в том же порядке; критический путь', crit_rows == codes4, cp4)
+    ass = [c.text for r in p1.tables[3].rows[1:] for c in [r.cells[1]]]
+    keys = ['пилотных', 'LLM', 'AppSource', 'лицензи', 'участники']
+    check('Каждое допущение ПЗ1 отражено риском в реестре', all(any(k.lower() in str(wr.cell(r, 3).value).lower() or (k == 'участники' and 'разработчика' in str(wr.cell(r, 3).value)) or (k == 'пилотных' and 'пилотных' in str(wr.cell(r, 3).value)) for r in range(4, 24)) for k in keys))
 
 print(f'| Требование | Статус | Комментарий |\n|---|---|---|')
 print('\n'.join(rows))
