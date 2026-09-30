@@ -123,6 +123,8 @@ elif work == 'risk':
     check('Карта рисков: на диаграмме только заполненные риски (нет пустых точек)', f"$F$4:$F${last}<" in ch and f"$G$4:$G${last}<" in ch and f'<row r="{last + 1}"' not in xml, f'точек {len(rr)}')
     alltxt = ' '.join(zipfile.ZipFile(f).read(n).decode('utf-8', 'ignore') for n in zipfile.ZipFile(f).namelist() if n.endswith('.xml')).lower()
     check('В книге нет данных чужого проекта (биометрия, «Умный офис», работники, IoT)', not re.search(r'биометр|умный офис|работник|iot', alltxt))
+    t1 = openpyxl.load_workbook(f, data_only=True)['Карта рисков']['A1'].value or ''
+    check('Заголовок карты рисков содержит название проекта (сохранённое значение формулы)', 'TableMind' in t1, t1)
     lvl = {'Низкое': (0.3, 0.4), 'Среднее': (0.5, 0.6), 'Высокое': (0.7, 0.8), 'Критическое': (0.9, 1.0)}
     bad_lvl = [f'R{ws.cell(r, 1).value}' for r in rr if not (lambda w: w in lvl and lvl[w][0] <= ws.cell(r, 7).value <= lvl[w][1])(str(ws.cell(r, 4).value).split(' ')[0])]
     check('Слово уровня влияния (столбец D) соответствует оценке воздействия I', not bad_lvl, ', '.join(bad_lvl) or 'все совпадают')
