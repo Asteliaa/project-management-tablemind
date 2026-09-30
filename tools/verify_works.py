@@ -31,7 +31,7 @@ if work == 'pz1':
     check('1.2 Проблемы → Решения (3 строки)', all(T[1].rows[i].cells[1].text and T[1].rows[i].cells[2].text for i in range(1, 4)))
     check('1.3 SMART — 5 критериев', all(T[2].rows[i].cells[1].text.strip() for i in range(1, 6)))
     check('1.3 Итоговая SMART-цель одним предложением', any(p.startswith('До 30.09.2027 командой') and len(re.findall(r'[.!?]\s+[А-ЯA-Z]', p)) == 0 for p in ps))
-    check('1.4 Правила приёмки — 5 проверяемых критериев',
+    check('1.4 Правила приёмки — не менее 5 проверяемых критериев',
           sum(1 for p in d.paragraphs if p._p.pPr is not None and p._p.pPr.numPr is not None and ('≥' in p.text or 'E2E' in p.text or 'blocker' in p.text or 'выдуманных' in p.text)) >= 5)
     check('1.5 Допущения — 5, у каждого влияние', all(T[3].rows[i].cells[1].text and T[3].rows[i].cells[2].text for i in range(1, 6)))
     mos = [len([l for l in T[4].rows[i].cells[2].text.split('\n') if l.strip()]) for i in range(1, 5)]
@@ -47,12 +47,25 @@ if work == 'pz1':
     per = [len([t for t in tk if t.startswith(s[0] + '.')]) for s in st]
     check('4 Декомпозиция: 5–7 этапов, 3–5 задач в этапе, 15–25 задач, иерархия',
           5 <= len(st) <= 7 and all(3 <= x <= 5 for x in per) and 15 <= len(tk) <= 25, f'{len(st)} этапов, задачи по этапам {per}, всего {len(tk)}')
-    sh = [[c.text for c in r.cells] for r in T[7].rows[1:]]
+    org = T[5].rows[3].cells[1].text
+    loads = [float(a.replace(',', '.')) * int(b) for a, b in re.findall(r'— ([\d,]+) ставк\w*, (\d+) мес', org)]
+    check('3 Загрузка команды: сумма ставок × месяцев = 57 чел.-мес., без диапазонов', len(loads) == 7 and sum(loads) == 57 and '–1 ставк' not in org, f'{sum(loads):g} чел.-мес.')
+    acc = [p.text for p in d.paragraphs if p._p.pPr is not None and p._p.pPr.numPr is not None]
+    check('1.4 Приёмка покрывает бизнес-метрики SMART (≥300 зарегистрированных, ≥50 платящих)', any('300 зарегистрированных' in t and '50 платящих' in t for t in acc))
+    check('4 Декомпозиция содержит только Must/обязательные работы (нет Should: ghost, Cmd-K, история версий)', not re.search(r'ghost|Cmd-K|\(Should\)|истори\w+ версий', ' '.join(blk)))
+    TW = next((t for t in T if t.rows[0].cells[0].text.strip() == 'Код'), None)
+    codes = [r.cells[0].text.strip() for r in TW.rows[1:]] if TW else []
+    check('4 Коды WBS из декомпозиции расшифрованы в самом отчёте (таблица 4.2)', codes == [f'{i}.0' for i in range(1, 16)], f'{len(codes)} работ')
+    TS = next(t for t in T if t.rows[0].cells[1].text.strip() == 'Стейкхолдер')
+    TQ = next(t for t in T if t.rows[0].cells[0].text.strip() == 'Квадрант')
+    sh = [[c.text for c in r.cells] for r in TS.rows[1:]]
     check('5.1 Стейкхолдеры: тип (внутр./внеш.) и почему важен', all(r[2] in ('Внутренний', 'Внешний') and r[3] for r in sh), f'{len(sh)} стейкхолдеров')
+    check('5.1 Среди внешних стейкхолдеров есть конкуренты и СМИ', any('Конкурент' in r[1] for r in sh) and any('СМИ' in r[1] for r in sh))
+    check('5.2–5.3 Квадрант D: своевременное и полное информирование (высокое влияние)', 'своевременно' in TQ.rows[4].cells[1].text and 'полн' in TQ.rows[4].cells[1].text)
     check('5.2 Матрица влияние/интерес (таблица + рисунок)', len(d.inline_shapes) >= 1)
     nums, bad = [], []
     for i in range(1, 5):
-        for line in T[9].rows[i].cells[2].text.split('\n'):
+        for line in TQ.rows[i].cells[2].text.split('\n'):
             m = re.match(r'(\d+)\. .*\((\d); (\d)\)', line)
             if m:
                 nums.append(int(m.group(1))); inf, it = int(m.group(2)), int(m.group(3))
@@ -149,6 +162,11 @@ elif work == 'cross':
     wg = openpyxl.load_workbook(glob.glob(f'{R}/pz4/*.xlsx')[0])['ТАБЛИЦА ДАННЫХ']
     crit_rows = [str(wg.cell(r, 3).value).split()[0] for r in range(8, 23)]
     check('Планировщик содержит те же 15 работ WBS в том же порядке; критический путь', crit_rows == codes4, cp4)
+    names4 = {r.cells[0].text: r.cells[1].text for r in p4.tables[0].rows[1:]}
+    tw1 = next(t for t in p1.tables if t.rows[0].cells[0].text.strip() == 'Код')
+    names1 = {r.cells[0].text: r.cells[1].text for r in tw1.rows[1:]}
+    check('Таблица 4.2 ПЗ1 совпадает с WBS ПЗ4 (коды и названия работ)', names1 == names4, f'{len(names1)} работ')
+    check('Should-функции (ghost-подсказки, Cmd-K) не запланированы ни в одной работе', not re.search(r'ghost|Cmd-K', t4 + rtxt) and 'ghost' not in ' '.join(names1.values()))
     ass = [c.text for r in p1.tables[3].rows[1:] for c in [r.cells[1]]]
     keys = ['пилотных', 'LLM', 'AppSource', 'лицензи', 'участники']
     check('Каждое допущение ПЗ1 отражено риском в реестре', all(any(k.lower() in str(wr.cell(r, 3).value).lower() or (k == 'участники' and 'разработчика' in str(wr.cell(r, 3).value)) or (k == 'пилотных' and 'пилотных' in str(wr.cell(r, 3).value)) for r in range(4, 24)) for k in keys))
