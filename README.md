@@ -7,7 +7,7 @@ AI-сервиса проверки Excel-моделей (веб-аудит + н�
 
 | Работа | Подробный отчёт | Что сдавать |
 |---|---|---|
-| ПЗ1 «Разработка концепции проекта» | [pz1/README.md](pz1/README.md) | `pz1/Земляник - ПЗ1 Концепция проекта TableMind.docx` |
+| ПЗ1 «Разработка концепции проекта» | [pz1/README.md](pz1/README.md) | `pz1/Земляник - ПЗ1 Концепция проекта TableMind.docx` + `pz1/Земляник - ПЗ1 Таблицы TableMind.xlsx` |
 | ПЗ4 «Календарно-сетевое планирование» (WBS, PERT, CPM, PDM, Гант) | [pz4/README.md](pz4/README.md) | `pz4/Земляник - ПЗ4 WBS, сетевой график и диаграмма Ганта TableMind.docx` + `pz4/Земляник - Диаграмма Ганта.xlsx` |
 | Управление рисками (реестр и карта рисков) | [risk-management/README.md](risk-management/README.md) | `risk-management/Земляник - Карта рисков.xlsx` |
 | Приложения (расчёты, расширенный реестр, рисунки) | [appendix/README.md](appendix/README.md) | по желанию |
